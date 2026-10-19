@@ -2,7 +2,7 @@
   Douyin-Vue
 </h1>
 
-此版本基于 [zyronon/douyin](https://github.com/zyronon/douyin) 的 `8cc6172c` 整理，于 2026-10-19 完成 Tailwind CSS v4 原子化迁移，并合入本地学习文档。独立目录使用新的 Git 历史，保留原项目来源与 LICENSE。样式约定及实际验证结果见 [迁移记录](docs/tailwind-migration.md)。
+此版本基于 [zyronon/douyin](https://github.com/zyronon/douyin) 的 `8cc6172c` 整理，于 2026-10-19 完成 Tailwind CSS v4 原子化迁移，并合入本地学习文档。独立仓库为 [woyaofei303/douyin](https://github.com/woyaofei303/douyin)，使用新的 Git 历史，保留原项目来源与 LICENSE。样式约定及实际验证结果见 [迁移记录](docs/tailwind-migration.md)。
 
 <p align="center">
  <a href="docs/README.en.md">English</a> | <a href="docs/README.es.md">Spanish</a> | <a href="docs/README.de.md">German</a> | 
@@ -78,7 +78,16 @@ docker run -d -p 80:80 ghcr.io/zyronon/douyin-vue:latest
 
 ### 本地开发
 
-使用 Node 24、pnpm 11.21.0。在项目根目录执行，安装时沿用锁文件：
+使用 Node 24、pnpm 11.21.0。首次获取项目并安装依赖：
+
+```bash
+git clone https://github.com/woyaofei303/douyin.git
+cd douyin
+pnpm install --frozen-lockfile
+pnpm dev
+```
+
+当前机器已整理好的独立目录位于 `/Users/julian/douyin-tailwind`，可直接运行：
 
 ```bash
 cd /Users/julian/douyin-tailwind
