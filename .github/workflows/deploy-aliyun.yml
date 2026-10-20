@@ -76,7 +76,7 @@ jobs:
     name: ${{ inputs.operation == 'rollback' && 'Rollback' || 'Deploy' }}
     needs: verify
     if: >-
-      !cancelled() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' &&
+      !cancelled() && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' &&
       ((inputs.operation == 'rollback' && needs.verify.result == 'skipped') ||
        (inputs.operation != 'rollback' && needs.verify.result == 'success'))
     runs-on: ubuntu-latest
