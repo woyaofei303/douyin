@@ -8,6 +8,7 @@
     "start": "vite --host",
     "serve": "vite --host",
     "build": "vite build",
+    "build:server": "vite build --mode prod --base /",
     "test-del-json": "node node/remove-dist-json.js",
     "build-uni-app": "vite build --mode uni",
     "build-gp-pages": "vite build --mode gp_pages",

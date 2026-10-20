@@ -60,6 +60,11 @@ Github Pages: [https://dy.typewords.cc/](https://dy.typewords.cc/)
 
 注意：本项目仅适用于学习和研究，不得用于商业使用
 
+### 阿里云自动部署
+
+演示地址：[dy.sunshinedairy.net](https://dy.sunshinedairy.net)。推送到 `main` 后，由 GitHub Actions 自动检查、构建和发布。
+新站点与原有 Streamlab 分开运行，部署结构、检查与回退方法见 [阿里云部署说明](docs/aliyun-deployment.md)。
+
 ### 上游部署参考
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/zyronon/douyin)

@@ -1,0 +1,83 @@
+name: Deploy Aliyun
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aliyun-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment:
+      name: aliyun-production
+      url: https://dy.sunshinedairy.net
+    env:
+      HUSKY: '0'
+      DEPLOY_HOST: ${{ vars.ALIYUN_HOST }}
+      DEPLOY_USER: ${{ vars.ALIYUN_USER }}
+      DEPLOY_PORT: ${{ vars.ALIYUN_PORT || '22' }}
+    steps:
+      - name: Check deployment configuration
+        env:
+          PRIVATE_KEY: ${{ secrets.ALIYUN_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ALIYUN_SSH_KNOWN_HOSTS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$DEPLOY_HOST" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]*$ ]] || { echo 'Configure ALIYUN_HOST'; exit 1; }
+          [[ "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]*$ ]] || { echo 'Configure ALIYUN_USER'; exit 1; }
+          [[ "$DEPLOY_PORT" =~ ^[0-9]+$ ]] || { echo 'Invalid ALIYUN_PORT'; exit 1; }
+          [[ -n "$PRIVATE_KEY" && -n "$KNOWN_HOSTS" ]] || { echo 'Configure SSH key and verified known_hosts'; exit 1; }
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check deployment rollback
+        run: python3 -m unittest discover -s deploy -p 'test_*.py'
+      - name: Check source
+        run: pnpm exec eslint . --ext .vue,.js,.ts,.tsx,.jsx,.cjs,.mjs --ignore-path .gitignore
+      - name: Install test browser
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Check interactions
+        run: pnpm test:styles --project=chromium
+      - name: Build server assets
+        run: pnpm build:server
+
+      - name: Upload and activate release
+        env:
+          PRIVATE_KEY: ${{ secrets.ALIYUN_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.ALIYUN_SSH_KNOWN_HOSTS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh_dir="$(mktemp -d "$RUNNER_TEMP/douyin-ssh.XXXXXX")"
+          trap 'rm -rf "$ssh_dir"' EXIT
+          chmod 700 "$ssh_dir"
+          printf '%s\n' "$PRIVATE_KEY" > "$ssh_dir/key"
+          printf '%s\n' "$KNOWN_HOSTS" > "$ssh_dir/known_hosts"
+          chmod 600 "$ssh_dir/key" "$ssh_dir/known_hosts"
+          unset PRIVATE_KEY KNOWN_HOSTS
+          ssh_options=(-i "$ssh_dir/key" -p "$DEPLOY_PORT" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$ssh_dir/known_hosts" -o ConnectTimeout=15)
+          target="$DEPLOY_USER@$DEPLOY_HOST"
+          release="$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          printf '%s\n' "$release" > dist/version.txt
+          ssh "${ssh_options[@]}" "$target" "mkdir -p /srv/douyin/releases/$release"
+          printf -v transport '%q ' ssh "${ssh_options[@]}"
+          rsync -az --chmod=D755,F644 --link-dest=/srv/douyin/current -e "$transport" \
+            dist/ "$target:/srv/douyin/releases/$release/"
+          ssh "${ssh_options[@]}" "$target" "python3 - '$release'" < deploy/release.py
+          actual="$(curl --fail --silent --show-error --retry 3 --max-time 30 https://dy.sunshinedairy.net/version.txt)"
+          [[ "$actual" == "$release" ]] || { echo 'Public HTTPS version check failed'; exit 1; }
+          printf 'Published %s to https://dy.sunshinedairy.net\n' "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
