@@ -32,9 +32,15 @@ Caddyfile。首次接入前的完整备份位于服务器：
 /root/douyin-deploy-backups/20261020/Caddyfile
 ```
 
+因为 Streamlab 的发布和回滚也会重写 Caddyfile，新增站点片段还由管理员保存到
+`/home/admin/streamlab/shared/extra-sites.caddy`。Streamlab 的服务器发布入口
+在验证和安装每个版本时合入这个片段，避免后续发布删除 `dy` 的转发规则。
+该文件不属于 Streamlab 的版本包，应用回滚不会撤销它。
+
 Caddy 使用热加载，不重启原有 Web、媒体或代理容器。日常发布只切换静态文件，
 不再改动代理或容器配置。服务配置如需修改，应由管理员检查、备份并单独应用；
-推送代码不会自动执行这些管理员操作。
+推送代码不会自动执行这些管理员操作。两个站点仍共用 Caddy 进程；Streamlab
+更新代理镜像或代理配置需要重建代理时，两个站点都可能短暂受影响。
 
 ## 一次发布怎样完成
 
