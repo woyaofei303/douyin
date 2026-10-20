@@ -75,7 +75,7 @@ jobs:
           printf '%s\n' "$release" > dist/version.txt
           ssh "${ssh_options[@]}" "$target" "mkdir -p /srv/douyin/releases/$release"
           printf -v transport '%q ' ssh "${ssh_options[@]}"
-          rsync -az --chmod=D755,F644 --link-dest=/srv/douyin/current -e "$transport" \
+          rsync -rzc --perms --chmod=D755,F644 --link-dest=/srv/douyin/current -e "$transport" \
             dist/ "$target:/srv/douyin/releases/$release/"
           ssh "${ssh_options[@]}" "$target" "python3 - '$release'" < deploy/release.py
           actual="$(curl --fail --silent --show-error --retry 3 --max-time 30 https://dy.sunshinedairy.net/version.txt)"

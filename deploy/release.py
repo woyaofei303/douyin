@@ -44,6 +44,17 @@ def switch_link(root, name, target):
     os.replace(temporary, root / name)
 
 
+def copy_asset(source, destination):
+    destination = Path(destination)
+    temporary = destination.with_name("." + destination.name + ".upload")
+    try:
+        shutil.copy2(source, temporary)
+        os.replace(temporary, destination)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return str(destination)
+
+
 def check_health(release_id):
     url = os.environ.get("DEPLOY_HEALTH_URL", "http://127.0.0.1:8088/version.txt")
     request = urllib.request.Request(
@@ -80,7 +91,10 @@ def deploy(root, release_id):
         for directory in ("js", "assets"):
             source = target / directory
             if source.is_dir():
-                shutil.copytree(source, root / "shared" / directory, dirs_exist_ok=True)
+                shutil.copytree(
+                    source, root / "shared" / directory,
+                    dirs_exist_ok=True, copy_function=copy_asset
+                )
         switch_link(root, "current", target)
         try:
             check_health(target.name)
