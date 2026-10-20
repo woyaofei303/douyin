@@ -81,6 +81,23 @@ class ReleaseTests(unittest.TestCase):
             release.deploy(self.root, target.name)
         self.assertFalse((self.root / "current").exists())
 
+    def test_rollback_without_previous_keeps_current(self):
+        first = self.fixture(1)
+        release.deploy(self.root, first.name)
+        with self.assertRaisesRegex(ValueError, "没有可回退"):
+            release.deploy(self.root, "--rollback")
+        self.assertEqual((self.root / "current").resolve(), first)
+
+    def test_failed_rollback_keeps_both_release_links(self):
+        first, second = self.fixture(1), self.fixture(2)
+        release.deploy(self.root, first.name)
+        release.deploy(self.root, second.name)
+        self.fail_health = True
+        with self.assertRaisesRegex(RuntimeError, "恢复"):
+            release.deploy(self.root, "--rollback")
+        self.assertEqual((self.root / "current").resolve(), second)
+        self.assertEqual((self.root / "previous").resolve(), first)
+
     def test_incomplete_release_and_path_escape_leave_current_unchanged(self):
         first, second = self.fixture(1), self.fixture(2)
         release.deploy(self.root, first.name)

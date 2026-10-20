@@ -62,7 +62,7 @@ Github Pages: [https://dy.typewords.cc/](https://dy.typewords.cc/)
 
 ### 阿里云自动部署
 
-演示地址：[dy.sunshinedairy.net](https://dy.sunshinedairy.net)。推送到 `main` 后，由 GitHub Actions 自动检查、构建和发布。
+演示地址：[dy.sunshinedairy.net](https://dy.sunshinedairy.net)。推送到 `main` 后，GitHub Actions 的 **CI & Production** 先检查、测试和构建，全部通过后部署同一份产物；同一入口也支持手动发布和回滚。
 新站点与原有 Streamlab 分开运行，部署结构、检查与回退方法见 [阿里云部署说明](docs/aliyun-deployment.md)。
 
 ### 上游部署参考

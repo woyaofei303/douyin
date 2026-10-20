@@ -1,26 +1,92 @@
-name: Deploy Aliyun
+name: CI & Production
 
 on:
+  pull_request:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      operation:
+        description: 检查并发布 main，或回滚到上一成功版本
+        type: choice
+        required: true
+        default: deploy
+        options: [deploy, rollback]
 
 permissions:
   contents: read
 
 concurrency:
-  group: aliyun-production
+  group: ${{ github.ref == 'refs/heads/main' && 'aliyun-production' || format('douyin-ci-{0}', github.ref) }}
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  verify:
+    name: CI
+    if: inputs.operation != 'rollback'
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      HUSKY: '0'
+    outputs:
+      release_id: ${{ steps.build.outputs.release_id }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check deployment rollback
+        run: python3 -m unittest discover -s deploy -p 'test_*.py'
+      - name: Check source
+        run: pnpm exec eslint . --ext .vue,.js,.ts,.tsx,.jsx,.cjs,.mjs --ignore-path .gitignore
+      - name: Install test browser
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Check interactions
+        run: pnpm test:styles --project=chromium
+      - name: Build server assets
+        id: build
+        run: |
+          pnpm build:server
+          release="$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          printf '%s\n' "$release" > dist/version.txt
+          printf 'release_id=%s\n' "$release" >> "$GITHUB_OUTPUT"
+      - name: Save failed browser traces
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: failed-browser-${{ github.run_id }}-${{ github.run_attempt }}
+          path: output-tdd/playwright/tailwind-migration/tests
+          retention-days: 7
+          if-no-files-found: ignore
+      - name: Save the CI build
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-${{ github.sha }}
+          path: dist/
+          retention-days: 7
+          if-no-files-found: error
+          overwrite: true
+
+  deploy:
+    name: ${{ inputs.operation == 'rollback' && 'Rollback' || 'Deploy' }}
+    needs: verify
+    if: >-
+      !cancelled() && github.ref == 'refs/heads/main' && github.event_name != 'pull_request' &&
+      ((inputs.operation == 'rollback' && needs.verify.result == 'skipped') ||
+       (inputs.operation != 'rollback' && needs.verify.result == 'success'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment:
       name: aliyun-production
       url: https://dy.sunshinedairy.net
     env:
-      HUSKY: '0'
+      OPERATION: ${{ inputs.operation || 'deploy' }}
+      RELEASE_ID: ${{ needs.verify.outputs.release_id }}
       DEPLOY_HOST: ${{ vars.ALIYUN_HOST }}
       DEPLOY_USER: ${{ vars.ALIYUN_USER }}
       DEPLOY_PORT: ${{ vars.ALIYUN_PORT || '22' }}
@@ -38,24 +104,14 @@ jobs:
           [[ -n "$PRIVATE_KEY" && -n "$KNOWN_HOSTS" ]] || { echo 'Configure SSH key and verified known_hosts'; exit 1; }
 
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - name: Download the CI build
+        if: inputs.operation != 'rollback'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          node-version: '24'
-      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Check deployment rollback
-        run: python3 -m unittest discover -s deploy -p 'test_*.py'
-      - name: Check source
-        run: pnpm exec eslint . --ext .vue,.js,.ts,.tsx,.jsx,.cjs,.mjs --ignore-path .gitignore
-      - name: Install test browser
-        run: pnpm exec playwright install --with-deps chromium
-      - name: Check interactions
-        run: pnpm test:styles --project=chromium
-      - name: Build server assets
-        run: pnpm build:server
+          name: release-${{ github.sha }}
+          path: dist/
 
-      - name: Upload and activate release
+      - name: Publish or roll back the release
         env:
           PRIVATE_KEY: ${{ secrets.ALIYUN_SSH_PRIVATE_KEY }}
           KNOWN_HOSTS: ${{ secrets.ALIYUN_SSH_KNOWN_HOSTS }}
@@ -71,13 +127,20 @@ jobs:
           unset PRIVATE_KEY KNOWN_HOSTS
           ssh_options=(-i "$ssh_dir/key" -p "$DEPLOY_PORT" -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$ssh_dir/known_hosts" -o ConnectTimeout=15)
           target="$DEPLOY_USER@$DEPLOY_HOST"
-          release="$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
-          printf '%s\n' "$release" > dist/version.txt
-          ssh "${ssh_options[@]}" "$target" "mkdir -p /srv/douyin/releases/$release"
-          printf -v transport '%q ' ssh "${ssh_options[@]}"
-          rsync -rzc --perms --chmod=D755,F644 --link-dest=/srv/douyin/current -e "$transport" \
-            dist/ "$target:/srv/douyin/releases/$release/"
-          ssh "${ssh_options[@]}" "$target" "python3 - '$release'" < deploy/release.py
+          if [[ "$OPERATION" == rollback ]]; then
+            release="$(ssh "${ssh_options[@]}" "$target" 'cat /srv/douyin/previous/version.txt')"
+            [[ "$release" =~ ^[0-9a-f]{40}-[0-9]+-[0-9]+$ ]] || { echo 'No valid previous release'; exit 1; }
+            ssh "${ssh_options[@]}" "$target" 'python3 - --rollback' < deploy/release.py
+          else
+            release="$RELEASE_ID"
+            [[ "$release" =~ ^[0-9a-f]{40}-[0-9]+-[0-9]+$ ]] || { echo 'Invalid CI release'; exit 1; }
+            [[ "$(cat dist/version.txt)" == "$release" && "$release" == "$GITHUB_SHA-"* ]] || { echo 'CI artifact does not match this commit'; exit 1; }
+            ssh "${ssh_options[@]}" "$target" "mkdir -p /srv/douyin/releases/$release"
+            printf -v transport '%q ' ssh "${ssh_options[@]}"
+            rsync -rzc --perms --chmod=D755,F644 --link-dest=/srv/douyin/current -e "$transport" \
+              dist/ "$target:/srv/douyin/releases/$release/"
+            ssh "${ssh_options[@]}" "$target" "python3 - '$release'" < deploy/release.py
+          fi
           actual="$(curl --fail --silent --show-error --retry 3 --max-time 30 https://dy.sunshinedairy.net/version.txt)"
           [[ "$actual" == "$release" ]] || { echo 'Public HTTPS version check failed'; exit 1; }
-          printf 'Published %s to https://dy.sunshinedairy.net\n' "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Operation: %s\n\nActive release: `%s`\n\nhttps://dy.sunshinedairy.net\n' "$OPERATION" "$release" >> "$GITHUB_STEP_SUMMARY"
