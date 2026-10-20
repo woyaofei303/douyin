@@ -62,6 +62,8 @@ Github Pages: [https://dy.typewords.cc/](https://dy.typewords.cc/)
 
 ### 阿里云自动部署
 
+学习首次部署、日常发布、回滚和面试表达：[CI/CD 从 0 到 1](docs/CICD-LEARNING.md)。
+
 演示地址：[dy.sunshinedairy.net](https://dy.sunshinedairy.net)。推送到 `main` 后只跑 CI。发布时打开 GitHub Actions 的 **CI & Production**，手动选择 `deploy`，本次检查、测试和构建全部通过后才部署同一份产物；同一入口选择 `rollback` 可回滚。
 新站点与原有 Streamlab 分开运行，部署结构、检查与回退方法见 [阿里云部署说明](docs/aliyun-deployment.md)。
 

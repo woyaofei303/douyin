@@ -1,5 +1,7 @@
 # 阿里云演示站自动部署
 
+想先理解整体流程和首次安装，可读 [CI/CD 从 0 到 1 学习指南](CICD-LEARNING.md)。
+
 演示地址是 `https://dy.sunshinedairy.net`。向 `woyaofei303/douyin` 的 `main`
 推送代码后，GitHub Actions 只检查和构建；在 Actions 手动选择 `deploy` 后，
 本次 CI 通过才发布新版本。服务器不需要安装 Node，
