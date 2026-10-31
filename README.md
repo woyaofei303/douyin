@@ -149,3 +149,7 @@ pnpm dev
 ## 许可协议
 
 [GPL](LICENSE)
+
+## Flutter 混合播放练习
+
+现有推荐页已增加播放控制、原生接力协议、本地弹幕和播放诊断。功能边界、开发命令与素材说明见 [Flutter 接入指南](docs/flutter-hybrid.md)。

@@ -5,6 +5,7 @@ import { BASE_URL, FILE_URL } from '@/config'
 import { useBaseStore } from '@/store/pinia'
 import { axiosInstance } from '@/utils/request'
 import MockAdapter from 'axios-mock-adapter'
+import { practiceVideos } from '@/player/practice'
 
 const mock = new MockAdapter(axiosInstance)
 
@@ -135,13 +136,15 @@ async function fetchData() {
 export async function startMock() {
   mock.onGet(/video\/recommended/).reply(async (config) => {
     const { start, pageSize } = config.params
+    const practice = new URLSearchParams(location.search).get('lab') === '1'
+    const videos = practice ? practiceVideos : allRecommendVideos
     // console.log('allRecommendVideos', cloneDeep(allRecommendVideos.length), config.params)
     return [
       200,
       {
         data: {
-          total: 844,
-          list: allRecommendVideos.slice(start, start + pageSize) // list: allRecommendVideos.slice(0, 6),
+          total: practice ? videos.length : 844,
+          list: videos.slice(start, start + pageSize)
         },
         code: 200,
         msg: ''

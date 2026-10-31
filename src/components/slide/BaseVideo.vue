@@ -7,7 +7,7 @@
       :poster="poster"
       ref="videoEl"
       :muted="state.isMuted"
-      preload="true"
+      preload="metadata"
       loop
       x5-video-player-type="h5-page"
       :x5-video-player-fullscreen="false"
@@ -15,7 +15,6 @@
       :x5-playsinline="true"
       :playsinline="true"
       :fullscreen="false"
-      :autoplay="isPlay"
     >
       <source
         v-for="(urlItem, index) in item.video.play_addr.url_list"
@@ -152,9 +151,10 @@ import ItemToolbar from './ItemToolbar.vue'
 import ItemDesc from './ItemDesc.vue'
 import bus, { EVENT_KEY } from '../../utils/bus'
 import { SlideItemPlayStatus } from '@/utils/const_var'
-import { computed, onMounted, onUnmounted, provide, reactive } from 'vue'
+import { computed, onMounted, onBeforeUnmount, provide, reactive } from 'vue'
 import { Icon } from '@iconify/vue'
 import { _css } from '@/utils/dom'
+import { registerVideo, playVideo, pauseVideo, reportPlaybackError } from '@/player/hybrid'
 
 defineOptions({
   name: 'BaseVideo'
@@ -212,6 +212,7 @@ provide(
 )
 
 const videoEl = $ref<HTMLVideoElement>()
+let unregisterVideo = () => {}
 const progressEl = $ref<HTMLDivElement>()
 let state = reactive({
   loading: false,
@@ -255,6 +256,9 @@ const progressClass = $computed(() => {
 })
 
 onMounted(() => {
+  unregisterVideo = registerVideo(videoEl, props.item as Parameters<typeof registerVideo>[1])
+  videoEl.addEventListener('play', syncPlayback)
+  videoEl.addEventListener('pause', syncPlayback)
   // console.log('video', this.localItem.aweme_id)
   // console.log(this.commentVisible)
   state.height = document.body.clientHeight
@@ -327,9 +331,13 @@ onMounted(() => {
   bus.on(EVENT_KEY.CLOSE_SUB_TYPE, onCloseSubType)
 
   bus.on(EVENT_KEY.REMOVE_MUTED, removeMuted)
+  if (props.isPlay) play()
 })
 
-onUnmounted(() => {
+onBeforeUnmount(() => {
+  videoEl.removeEventListener('play', syncPlayback)
+  videoEl.removeEventListener('pause', syncPlayback)
+  unregisterVideo()
   // console.log('unmounted')
   bus.off(EVENT_KEY.SINGLE_CLICK_BROADCAST, click)
   bus.off(EVENT_KEY.DIALOG_MOVE, onDialogMove)
@@ -422,14 +430,17 @@ function click({ uniqueId, index, type }) {
 }
 
 function play() {
-  state.status = SlideItemPlayStatus.Play
   videoEl.volume = 1
-  videoEl.play()
+  void playVideo(videoEl).catch(reportPlaybackError)
 }
 
 function pause() {
-  state.status = SlideItemPlayStatus.Pause
-  videoEl.pause()
+  pauseVideo(videoEl)
+}
+
+function syncPlayback() {
+  state.status = videoEl.paused ? SlideItemPlayStatus.Pause : SlideItemPlayStatus.Play
+  state.paused = videoEl.paused
 }
 
 function touchstart(e) {

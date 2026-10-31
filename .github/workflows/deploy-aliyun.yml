@@ -43,6 +43,8 @@ jobs:
         run: python3 -m unittest discover -s deploy -p 'test_*.py'
       - name: Check source
         run: pnpm exec eslint . --ext .vue,.js,.ts,.tsx,.jsx,.cjs,.mjs --ignore-path .gitignore
+      - name: Check hybrid playback
+        run: pnpm typecheck:hybrid && pnpm test:hybrid
       - name: Install test browser
         run: pnpm exec playwright install --with-deps chromium
       - name: Check interactions

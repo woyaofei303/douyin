@@ -80,3 +80,23 @@
     display: none;
   }
 }
+
+/* App WebViews use their available width; desktop browsers keep the original preview. */
+@layer utilities {
+  html.lab-host #app,
+  html.lab-fullscreen #app {
+    width: 100% !important;
+    left: 0 !important;
+    transform: none !important;
+  }
+}
+@layer base {
+  .video-lab-tools :is(button, input, select) {
+    font: inherit;
+    color: inherit;
+    box-sizing: border-box;
+  }
+  .video-lab-tools button {
+    border: 0;
+  }
+}

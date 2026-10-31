@@ -39,6 +39,8 @@ const props = defineProps({
 const emit = defineEmits(['update:index'])
 
 let ob = null
+let resizeObserver: ResizeObserver | undefined
+let autoplayTimer: ReturnType<typeof setInterval> | undefined
 //slide-list的ref引用
 const slideListEl = ref(null)
 
@@ -80,9 +82,11 @@ watch(
 
 onMounted(() => {
   slideInit(slideListEl.value, state)
+  resizeObserver = new ResizeObserver(() => slideInit(slideListEl.value, state))
+  resizeObserver.observe(slideListEl.value)
 
   if (props.autoplay) {
-    setInterval(() => {
+    autoplayTimer = setInterval(() => {
       if (state.localIndex === state.wrapper.childrenLength - 1) {
         emit('update:index', 0)
       } else {
@@ -101,6 +105,8 @@ onMounted(() => {
 
 onUnmounted(() => {
   ob.disconnect()
+  resizeObserver?.disconnect()
+  clearInterval(autoplayTimer)
 })
 
 function touchStart(e) {

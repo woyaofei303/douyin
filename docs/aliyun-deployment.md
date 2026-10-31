@@ -57,7 +57,7 @@ Actions 只保留一个 **CI & Production** 入口，文件是
 
 例如修改一个按钮并推送到 `main` 后，CI 任务使用 Node 24 和 `package.json`
 固定的 pnpm 版本，复用 pnpm 下载缓存、按锁文件安装依赖，执行 ESLint、
-6 个发布回退测试和现有的 15 个 Chromium 交互用例，然后运行：
+6 个发布回退测试、新增混合播放模块的严格类型检查与 4 个 Node 行为测试，以及 19 个 Chromium 交互用例，然后运行：
 
 ```bash
 pnpm build:server
@@ -115,6 +115,8 @@ SSH 主机指纹已通过阿里云控制台核对。工作流严格检查主机�
 ```bash
 cd /Users/julian/douyin-tailwind
 python3 -m unittest discover -s deploy -p 'test_*.py'
+pnpm typecheck:hybrid
+pnpm test:hybrid
 pnpm test:styles --project=chromium
 pnpm build:server
 ```

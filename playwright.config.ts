@@ -19,7 +19,7 @@ export default defineConfig({
   ],
   webServer: {
     command:
-      'node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 3002 --strictPort --open false',
+      'node node_modules/vite/bin/vite.js --host 127.0.0.1 --port 3002 --strictPort --mode prod --open false',
     url: 'http://127.0.0.1:3002',
     reuseExistingServer: true
   }

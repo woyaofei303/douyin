@@ -2,6 +2,7 @@ import { createRouter, createWebHashHistory, createWebHistory } from 'vue-router
 import routes from './routes'
 import { useBaseStore } from '@/store/pinia'
 import { IS_SUB_DOMAIN } from '@/config'
+import { player, setPageActive } from '@/player/hybrid'
 
 const router = createRouter({
   history: IS_SUB_DOMAIN ? createWebHashHistory() : createWebHistory(),
@@ -16,6 +17,13 @@ const router = createRouter({
   }
 })
 router.beforeEach((to, from) => {
+  if (player.connected && !['/', '/home'].includes(to.path)) {
+    player.notice =
+      player.language === 'en'
+        ? 'This page is not available in the app yet.'
+        : '此页面暂不支持在 App 中打开。'
+    return false
+  }
   const baseStore = useBaseStore()
   //footer下面的5个按钮，对跳不要用动画
   const noAnimation = ['/', '/home', '/me', '/shop', '/message', '/publish', '/home/live', '/test']
@@ -45,5 +53,7 @@ router.beforeEach((to, from) => {
   }
   return true
 })
+
+router.afterEach((to) => setPageActive(['/', '/home', '/video-detail'].includes(to.path)))
 
 export default router

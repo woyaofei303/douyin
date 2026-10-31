@@ -169,6 +169,7 @@ export default defineConfig(({ mode }): Promise<UserConfig> => {
           // drop: ['console', 'debugger']
         },
         server: {
+          watch: { ignored: ['**/output-tdd/**', '**/docs-tdd/**'] },
           port: 3000,
           open: true,
           host: '0.0.0.0',

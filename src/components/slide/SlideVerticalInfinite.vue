@@ -1,5 +1,13 @@
 <script setup lang="tsx">
-import { createApp, onMounted, reactive, ref, render as vueRender, watch } from 'vue'
+import {
+  createApp,
+  onMounted,
+  onBeforeUnmount,
+  reactive,
+  ref,
+  render as vueRender,
+  watch
+} from 'vue'
 import {
   getSlideOffset,
   slideInit,
@@ -59,6 +67,7 @@ const props = defineProps({
 const emit = defineEmits(['update:index', 'loadMore', 'refresh'])
 
 const appInsMap = new Map()
+let resizeObserver: ResizeObserver | undefined
 const itemSelector = '[data-slide-item]'
 const slideListEl = ref<HTMLDivElement>(null)
 const state = reactive({
@@ -151,19 +160,17 @@ watch(
 watch(
   () => state.localIndex,
   (newVal, oldVal) => {
+    bus.emit(EVENT_KEY.SINGLE_CLICK_BROADCAST, {
+      uniqueId: props.uniqueId,
+      index: oldVal,
+      type: EVENT_KEY.ITEM_STOP
+    })
     bus.emit(EVENT_KEY.CURRENT_ITEM, props.list[newVal])
     bus.emit(EVENT_KEY.SINGLE_CLICK_BROADCAST, {
       uniqueId: props.uniqueId,
       index: newVal,
       type: EVENT_KEY.ITEM_PLAY
     })
-    setTimeout(() => {
-      bus.emit(EVENT_KEY.SINGLE_CLICK_BROADCAST, {
-        uniqueId: props.uniqueId,
-        index: oldVal,
-        type: EVENT_KEY.ITEM_STOP
-      })
-    }, 200)
   }
 )
 watch(
@@ -173,24 +180,34 @@ watch(
     if (newVal && !props.list.length) {
       return emit('refresh')
     }
-    let t = newVal ? 0 : 200
     // console.log('active', 'newVal', newVal, 'oldVal', oldVal)
     if (newVal) {
       bus.emit(EVENT_KEY.CURRENT_ITEM, props.list[state.localIndex])
     }
-    setTimeout(() => {
-      bus.emit(EVENT_KEY.SINGLE_CLICK_BROADCAST, {
-        uniqueId: props.uniqueId,
-        index: state.localIndex,
-        type: newVal === false ? EVENT_KEY.ITEM_STOP : EVENT_KEY.ITEM_PLAY
-      })
-    }, t)
+    bus.emit(EVENT_KEY.SINGLE_CLICK_BROADCAST, {
+      uniqueId: props.uniqueId,
+      index: state.localIndex,
+      type: newVal === false ? EVENT_KEY.ITEM_STOP : EVENT_KEY.ITEM_PLAY
+    })
   },
   { immediate: true }
 )
 
 onMounted(() => {
   slideInit(slideListEl.value, state)
+  resizeObserver = new ResizeObserver(() => {
+    slideInit(slideListEl.value, state)
+    const children = Array.from(slideListEl.value.children) as HTMLElement[]
+    const start = Number(children[0]?.dataset.index || 0)
+    children.forEach((child) => _css(child, 'top', start * state.wrapper.height))
+  })
+  resizeObserver.observe(slideListEl.value)
+})
+
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
+  appInsMap.forEach((app) => app.unmount())
+  appInsMap.clear()
 })
 
 /**
@@ -198,6 +215,8 @@ onMounted(() => {
  */
 function insertContent() {
   if (!props.list.length) return
+  appInsMap.forEach((app) => app.unmount())
+  appInsMap.clear()
   //清空SlideList
   slideListEl.value.innerHTML = ''
   let half = parseInt((props.virtualTotal / 2).toString()) //虚拟列表的一半
@@ -260,7 +279,7 @@ defineExpose({ dislike })
  */
 function getInsEl(item, index, play = false) {
   // console.log('index', cloneDeep(item), index, play)
-  let slideVNode = props.render(item, index, play, props.uniqueId)
+  let slideVNode = props.render(item, index, play && props.active, props.uniqueId)
   const parent = document.createElement('div')
   //TODO 打包到线上时用这个，这个在开发时任何修改都会刷新页面
   if (import.meta.env.PROD) {
@@ -332,6 +351,7 @@ function touchEnd(e) {
             .querySelector(`${itemSelector}:first-child`)
             .getAttribute('data-index')
           appInsMap.get(Number(index)).unmount()
+          appInsMap.delete(Number(index))
 
           slideListEl.value.querySelectorAll(`${itemSelector}`).forEach((item) => {
             _css(item, 'top', (state.localIndex - half) * state.wrapper.height)
@@ -351,6 +371,7 @@ function touchEnd(e) {
             .querySelector(`${itemSelector}:last-child`)
             .getAttribute('data-index')
           appInsMap.get(Number(index)).unmount()
+          appInsMap.delete(Number(index))
 
           slideListEl.value.querySelectorAll(`${itemSelector}`).forEach((item) => {
             _css(item, 'top', (state.localIndex - half) * state.wrapper.height)

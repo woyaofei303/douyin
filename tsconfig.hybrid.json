@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.app.json",
+  "include": ["env.d.ts", "src/player/**/*.ts", "src/player/**/*.vue"],
+  "compilerOptions": {
+    "strict": true,
+    "composite": false,
+    "incremental": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.hybrid.tsbuildinfo"
+  }
+}

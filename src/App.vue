@@ -7,6 +7,7 @@
     </transition>
   </router-view>
   <Call />
+  <PlayerTools />
 </template>
 <script setup lang="ts">
 /*
@@ -16,11 +17,10 @@ try {navigator.control.longpressMenu(false);} catch (e) {} //关闭长按弹出�
 import routes from './router/routes'
 import Call from './components/Call.vue'
 import { useBaseStore } from '@/store/pinia.js'
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
-import BaseMask from '@/components/BaseMask.vue'
-import { BASE_URL } from '@/config'
+import PlayerTools from '@/player/PlayerTools.vue'
 
 const store = useBaseStore()
 const route = useRoute()
@@ -83,9 +83,7 @@ onMounted(() => {
   store.init()
   resetVhAndPx()
   // 监听resize事件 视图大小发生变化就重新计算1vh的值
-  window.addEventListener('resize', () => {
-    location.href = BASE_URL + '/'
-    resetVhAndPx()
-  })
+  window.addEventListener('resize', resetVhAndPx)
 })
+onUnmounted(() => window.removeEventListener('resize', resetVhAndPx))
 </script>
