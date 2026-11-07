@@ -1,6 +1,6 @@
 # 推荐页接入 Flutter
 
-现有 `/home` 推荐页新增“播放工具”，App 仍打开 `https://dy.sunshinedairy.net/`。普通浏览器可使用控制、评论和弹幕；Flutter 宿主接入后增加原生接力、身份/语言同步与 App 全屏。
+现有 `/home` 推荐页新增“播放工具”，App 仍打开 `https://dy.fameex-testnet.xyz/`。普通浏览器可使用控制、评论和弹幕；Flutter 宿主接入后增加原生接力、身份/语言同步与 App 全屏。
 
 ## 从第 8 秒开始验证
 

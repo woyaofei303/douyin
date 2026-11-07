@@ -2,19 +2,21 @@
 
 想先理解整体流程和首次安装，可读 [CI/CD 从 0 到 1 学习指南](CICD-LEARNING.md)。
 
-演示地址是 `https://dy.sunshinedairy.net`。向 `woyaofei303/douyin` 的 `main`
+演示地址是 `https://dy.fameex-testnet.xyz`。向 `woyaofei303/douyin` 的 `main`
 推送代码后，GitHub Actions 只检查和构建；在 Actions 手动选择 `deploy` 后，
 本次 CI 通过才发布新版本。服务器不需要安装 Node，
 也不需要保存整个源码仓库。实际发布结果以 Actions 记录和网站的 `version.txt` 为准。
 
+2026-11-07 已将 DNS、HTTPS 代理、Nginx 主机名和发布检查地址迁移到 `dy.fameex-testnet.xyz`，原 `dy.sunshinedairy.net` 解析已移除。静态应用版本未改变，页面与资源使用相对地址。浏览器本地数据按域名隔离，新地址不会自动继承旧站点的演示状态。
+
 ## 与原站点怎样共存
 
 两个项目使用同一台首尔区域的 Ubuntu 24.04 服务器，公网 IP 为 `47.80.28.238`。
-原有 `live.sunshinedairy.net` 继续使用 Streamlab；本项目使用独立的 DNS 记录、
+原有 `live.fameex-testnet.xyz` 继续使用 Streamlab；本项目使用独立的 DNS 记录、
 发布账号、目录和 Docker Compose 项目：
 
 ```text
-新域名：       dy.sunshinedairy.net
+新域名：       dy.fameex-testnet.xyz
 部署账号：     douyin-deploy（无 sudo、无 Docker 管理权限）
 Compose 项目： douyin
 容器：         douyin-web-1
@@ -129,7 +131,7 @@ pnpm build:server
 
 ```bash
 gh run list --repo woyaofei303/douyin --workflow deploy-aliyun.yml --limit 5
-curl --fail https://dy.sunshinedairy.net/version.txt
+curl --fail https://dy.fameex-testnet.xyz/version.txt
 ```
 
 日常回滚在 GitHub 上打开 **Actions → CI & Production → Run workflow**，

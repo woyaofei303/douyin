@@ -7,7 +7,7 @@ import {
   visibleDanmaku
 } from '../../src/player/model.ts'
 
-const origin = 'https://dy.sunshinedairy.net'
+const origin = 'https://dy.fameex-testnet.xyz'
 const state = {
   videoId: 'demo-1',
   sourceVersion: 'demo-v1',
@@ -24,7 +24,7 @@ test('原生接力只接受精确同站自制素材，不信任伪造域名、�
     `${origin}.evil.test/lab-media/demo-720.mp4`,
     `${origin}:444/lab-media/demo-720.mp4`,
     `${origin}/lab-media/demo-720.mp4?token=x`,
-    'https://user:pass@dy.sunshinedairy.net/lab-media/demo-720.mp4',
+    'https://user:pass@dy.fameex-testnet.xyz/lab-media/demo-720.mp4',
     'https://www.douyin.com/aweme/v1/play/',
     'file:///etc/passwd'
   ])

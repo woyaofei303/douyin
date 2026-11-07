@@ -1,6 +1,6 @@
 # Douyin CI/CD：从第一次部署到能在面试中讲清楚
 
-这份文档用一个具体例子贯穿全程：修改登录按钮，把代码推到 GitHub，检查通过后手动发布到 `https://dy.sunshinedairy.net`；如果新版本有问题，再恢复上一版。
+这份文档用一个具体例子贯穿全程：修改登录按钮，把代码推到 GitHub，检查通过后手动发布到 `https://dy.fameex-testnet.xyz`；如果新版本有问题，再恢复上一版。
 
 读完后，你应该能回答三个问题：谁在检查代码，服务器收到的到底是什么，以及失败时网站会停在哪个版本。日常操作速查见 [阿里云部署说明](aliyun-deployment.md)。
 
@@ -118,7 +118,7 @@ gh auth login
 
 ### 3.3 配置 DNS
 
-阿里云 DNS 控制台打开 `sunshinedairy.net`，添加一条记录：
+阿里云 DNS 控制台打开 `fameex-testnet.xyz`，添加一条记录：
 
 ```text
 记录类型：A
@@ -130,7 +130,7 @@ TTL：10 分钟
 保留已有 `live` 记录。不要为了部署子域名修改根域名 `@`。本机查询：
 
 ```bash
-dig +short dy.sunshinedairy.net A
+dig +short dy.fameex-testnet.xyz A
 ```
 
 预期返回目标服务器 IP；DNS 缓存未刷新时先等待或查询公共解析器，不要反复创建同名记录。DNS 只负责找到机器，站点能否打开还取决于服务和 HTTPS。
@@ -231,8 +231,8 @@ task_backup="/root/douyin-proxy-backup-$(date +%Y%m%d-%H%M%S)"
 mkdir -m 700 "$task_backup"
 task_config=/home/admin/streamlab/shared/config/Caddyfile
 task_extra=/home/admin/streamlab/shared/extra-sites.caddy
-if grep -qF 'dy.sunshinedairy.net' "$task_config"; then echo '站点已配置，停止重复追加'; exit 1; fi
-if test -f "$task_extra" && grep -qF 'dy.sunshinedairy.net' "$task_extra"; then echo '额外站点已配置，先检查现状'; exit 1; fi
+if grep -qF 'dy.fameex-testnet.xyz' "$task_config"; then echo '站点已配置，停止重复追加'; exit 1; fi
+if test -f "$task_extra" && grep -qF 'dy.fameex-testnet.xyz' "$task_extra"; then echo '额外站点已配置，先检查现状'; exit 1; fi
 cp -p "$task_config" "$task_backup/Caddyfile"
 if test -f "$task_extra"; then cp -p "$task_extra" "$task_backup/extra-sites.caddy"; fi
 { cat "$task_config"; printf '\n'; cat /tmp/douyin-config/Caddyfile; } > "$task_backup/candidate"
@@ -311,9 +311,9 @@ CI 成功后上传本次 `dist`，Deploy 下载这份产物，确认 `version.tx
 部署完成后，本机验证：
 
 ```bash
-curl --fail https://dy.sunshinedairy.net/version.txt
-curl --head http://dy.sunshinedairy.net/home
-curl --head https://dy.sunshinedairy.net/login/password
+curl --fail https://dy.fameex-testnet.xyz/version.txt
+curl --head http://dy.fameex-testnet.xyz/home
+curl --head https://dy.fameex-testnet.xyz/login/password
 ```
 
 预期版本标识为 `40位提交号-运行号-重试号`，HTTP 跳转 HTTPS，深层路由返回 200。浏览器再实际打开登录、首页和设置页面。HTTP 200 只证明服务器返回内容，不能代替页面渲染或交互检查。
